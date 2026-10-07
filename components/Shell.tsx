@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { clearCachedPages } from '@/lib/pageCache'
+import { buildTree, numberByPath } from '@/lib/nav'
 import Sidebar from './Sidebar'
 
 export interface Me {
@@ -71,6 +72,8 @@ interface WikiContextValue {
   files: WikiFile[] | null
   /** Sidebar sort order from .commonplace/order.yaml: directory path → child names. */
   order: Record<string, string[]>
+  /** Section number per page/directory path, derived from the navigation tree. */
+  pageNumbers: Map<string, string>
   treeError: string | null
   settings: WikiSettings | null
   /** Bundle path of the wiki logo (.commonplace/logo.svg or .png), if any. */
@@ -85,6 +88,7 @@ const WikiContext = createContext<WikiContextValue>({
   config: null,
   files: null,
   order: {},
+  pageNumbers: new Map(),
   treeError: null,
   settings: null,
   logo: null,
@@ -262,6 +266,13 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   const [logo, setLogo] = useState<string | null>(null)
   // Monotonic id so an older, slower /api/tree response never overwrites a newer one.
   const treeRequestRef = useRef(0)
+
+  // Section numbers follow the same ordered tree the sidebar renders, derived
+  // from committed data so a page title matches the sidebar after a reload.
+  const pageNumbers = useMemo(
+    () => numberByPath(files ? buildTree(files, order) : []),
+    [files, order]
+  )
 
   const refreshSettings = useCallback(() => {
     fetch('/api/settings')
@@ -482,7 +493,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
 
   return (
     <WikiContext.Provider
-      value={{ me, config, files, order, treeError, settings, logo, refreshTree, refreshSettings }}
+      value={{ me, config, files, order, pageNumbers, treeError, settings, logo, refreshTree, refreshSettings }}
     >
       <header className="topbar">
         {(isMobile ? !navOpen : collapsed) && (

@@ -398,6 +398,54 @@ body.sidebar-resizing {
   text-decoration: none;
 }
 
+.tree-number {
+  flex: none;
+  min-width: 18px;
+  text-align: right;
+  color: var(--text-subtle);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Indent / outdent controls: revealed on hover or focus, kept on the active row. */
+.tree-actions {
+  flex: none;
+  display: inline-flex;
+  gap: 2px;
+  margin-right: 4px;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+.tree-row:hover .tree-actions,
+.tree-row:focus-within .tree-actions,
+.tree-row.active .tree-actions {
+  opacity: 1;
+}
+.tree-move {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-subtle);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+}
+.tree-move:hover:not(:disabled) {
+  background: var(--border);
+  color: var(--text);
+}
+.tree-move:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
 /* Drag & drop reordering */
 .tree-row.dragging {
   opacity: 0.4;
@@ -513,6 +561,13 @@ body.sidebar-resizing {
   font-weight: 700;
   margin: 0 0 6px;
   line-height: 1.25;
+}
+
+.section-number {
+  margin-right: 8px;
+  color: var(--text-subtle);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 .meta-card {
