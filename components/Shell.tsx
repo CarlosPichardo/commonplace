@@ -6,6 +6,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { clearCachedPages } from '@/lib/pageCache'
 import { buildTree, numberByPath } from '@/lib/nav'
 import Sidebar from './Sidebar'
+import SearchPanel from './SearchPanel'
 
 export interface Me {
   login: string
@@ -243,6 +244,17 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     if (p.endsWith('.md')) return p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : ''
     return p
   })()
+  // Bundle path of the page being viewed, for the search scope ('' when none).
+  const searchPath = (() => {
+    const p = decodeURIComponent(pathname).replace(/^\/+/, '')
+    if (!p || p === 'settings' || p === 'mcp' || p === 'login' || p === 'graph' || p.startsWith('setup')) return ''
+    if (p.startsWith('edit/')) {
+      const target = p.slice('edit/'.length)
+      return target.startsWith('__new__') ? '' : target
+    }
+    if (p.startsWith('wiki/')) return p.slice('wiki/'.length)
+    return p
+  })()
   const [me, setMe] = useState<Me | null>(null)
   /** True when /api/config reported that GIT_REPO is not set at all. */
   const [unconfigured, setUnconfigured] = useState(false)
@@ -251,6 +263,8 @@ export default function Shell({ children }: { children: React.ReactNode }) {
   // Mobile nav drawer: hidden on wide screens, slides in over the content
   // when the topbar hamburger is tapped.
   const [navOpen, setNavOpen] = useState(false)
+  // Search overlay, opened from the top bar or with Cmd/Ctrl+K.
+  const [searchOpen, setSearchOpen] = useState(false)
   // Desktop: dragging the resizer fully to the left collapses the sidebar;
   // the hamburger (only shown while collapsed) brings it back. Persisted.
   const [collapsed, setCollapsed] = useState(false)
@@ -406,6 +420,18 @@ export default function Shell({ children }: { children: React.ReactNode }) {
     setNavOpen(false)
   }, [pathname])
 
+  // Open the search panel with Cmd/Ctrl+K.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
   // Resizable sidebar: width lives in the --sidebar-w CSS variable and persists.
   useEffect(() => {
     try {
@@ -519,6 +545,20 @@ export default function Shell({ children }: { children: React.ReactNode }) {
           {settings === null ? ' ' : settings.name || 'Commonplace'}
         </Link>
         <div className="topbar-spacer" />
+        {!unconfigured && (
+          <button
+            className="btn search-open"
+            onClick={() => setSearchOpen(true)}
+            aria-label="Search"
+            title="Search (Ctrl/Cmd+K)"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+            <span className="search-open-label">Search</span>
+          </button>
+        )}
         {!isEditing && me && (
           <Link
             href={`/edit/__new__${currentDir ? `?dir=${encodeURIComponent(currentDir)}` : ''}`}
@@ -553,6 +593,7 @@ export default function Shell({ children }: { children: React.ReactNode }) {
         )}
         {unconfigured ? <Unconfigured /> : rateLimited ? <RateLimited resetAt={rateLimited.resetAt} /> : children}
       </main>
+      <SearchPanel open={searchOpen} onClose={() => setSearchOpen(false)} currentPath={searchPath} />
     </WikiContext.Provider>
   )
 }
